@@ -1,0 +1,76 @@
+// Copyright (c) 2019-present, Alex Orekhov (everget)
+// Chandelier Exit script may be freely distributed under the terms of the GPL-3.0 license.
+
+// |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
+// Credit to the Chandelier Exit indicator everget. 
+// everget profile: https://www.tradingview.com/u/everget/
+// Chandelier Exit: https://www.tradingview.com/script/AqXxNS7j-Chandelier-Exit/
+
+// This is a combination indicator between supertrend (use everget chandelier exit indicator), and with heikin ashi candle.
+// For general supertrend is using the source dorm the current candle, but this indicator use the fixed source from heikin ashi candle.
+// |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
+
+//@version=5
+indicator("INDICATOR: Chandelier Exit Heikin Ashi Signal (林19)", shorttitle = "I CE-HA Signal (林19)", overlay = true)
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR INPUT /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Input: Supertrend value =====================================================
+length      = input.int(1, "ATR Period")
+mult        = input.float(1.85, "ATR Multiplier")
+useClose    = input.bool(true, "Use Close Price for Extremums ?")
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR CALCULATION & ALGORITHM ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Algo: set the heikin ashi candle source =====================================
+ha_open     = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, open)
+ha_high     = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, high)
+ha_low      = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, low)
+ha_close    = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close)
+// ========================================================================== //
+
+// Algo: ATR manual calculation, the source from the heikin ashi ===============
+pine_atr(length) =>
+    trueRange = na(ha_high[1])? ha_high-ha_low : math.max(math.max(ha_high - ha_low, math.abs(ha_high - ha_close[1])), math.abs(ha_low - ha_close[1]))
+    ta.rma(trueRange, length)
+
+atr = mult * pine_atr(length)
+// ========================================================================== //
+
+// Algo: set the supertrend value ==============================================
+longStop        = (useClose ? ta.highest(ha_close, length) : ta.highest(length)) - atr
+longStopPrev    = nz(longStop[1], longStop) 
+longStop        := ha_close[1] > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+
+shortStop       = (useClose ? ta.lowest(ha_close, length) : ta.lowest(length)) + atr
+shortStopPrev   = nz(shortStop[1], shortStop)
+shortStop       := ha_close[1] < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+
+var int dir = 1
+dir := ha_close > shortStopPrev ? 1 : ha_close < longStopPrev ? -1 : dir
+
+// Supertrend color
+var color longColor     = color.aqua
+var color shortColor    = color.fuchsia
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// PLOT INDICATOR //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Plot: buy/long signal indicator =============================================
+buySignal = dir == 1 and dir[1] == -1
+plotshape(buySignal ? longStop : na, title="Long Stop Start", location=location.absolute, style=shape.circle, size=size.tiny, color=longColor)
+plotshape(buySignal ? longStop : na, title="Buy Label", text="Buy", location=location.absolute, style=shape.labelup, size=size.tiny, color=longColor, textcolor=color.white)
+// ========================================================================== //
+
+// Plot: sell/short signal indicator ===========================================
+sellSignal = dir == -1 and dir[1] == 1
+plotshape(sellSignal ? shortStop : na, title="Short Stop Start", location=location.absolute, style=shape.circle, size=size.tiny, color=shortColor)
+plotshape(sellSignal ? shortStop : na, title="Sell Label", text="Sell", location=location.absolute, style=shape.labeldown, size=size.tiny, color=shortColor, textcolor=color.white)
+// ========================================================================== //

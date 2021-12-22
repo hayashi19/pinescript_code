@@ -1,0 +1,44 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+indicator("INDICATOR: ATR Volatility Power (林19)", shorttitle = "ATR Volatility Power (林19)", overlay = false)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR INPUT =============================================================
+
+atr_period  = input.int(14, "ATR Value")
+atr_low     = input.int(200, "ATR Lowest Value")
+atr_smooth  = input.int(9, "ATR Smooth")
+break_per   = input.int(9, "ATR Breakout Value")
+
+// ========================================================================== //
+
+// INDICATOR CALCULATION =======================================================
+
+atr         = ta.atr(atr_period)
+atr_lowest  = ta.lowest(atr, atr_low)
+atr         := ta.sma(atr - atr_lowest, atr_smooth)
+
+atr_break   = ta.lowest(atr, break_per)
+
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR CONDITION & COLOR =================================================
+
+atr_color   = atr[1] < atr ? color.lime : color.red
+break_color = atr == atr_break ? color.blue : color.white
+
+// ========================================================================== //
+
+// INDICATOR PLOT ==============================================================
+
+plot(atr, color = atr_color, style = plot.style_columns)
+plot(atr_break, color = break_color, style = plot.style_circles, linewidth = 2)
+
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,40 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+indicator("INDICATOR: Modified ADX (林19)", shorttitle = "ADX (林19)", timeframe = "")
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR INPUT =============================================================
+
+adx_period  = input.int(14, "DI Length")
+adx_lensig  = input.int(14, "Len Sig")
+
+adx_ma_per  = input.int(9, "ADX MA")
+
+// ========================================================================== //
+
+// INDICATOR CALCULATION =======================================================
+
+[diplus, diminus, adx_normal] = ta.dmi(adx_period, adx_lensig)
+
+adx = adx_normal - 20
+adx_ma = ta.sma(adx, adx_ma_per)
+
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR COLOR & CONDITION =================================================
+
+adx_color = adx > 0 ? adx[1] < adx ? #55FF00 : #2B8000 : adx < 0 ? adx[1] < adx ? #800000 : #FF0000 : na
+
+// ========================================================================== //
+
+// PLOT INDICATOR ==============================================================
+
+plot(adx, color = adx_color, style = plot.style_columns)
+plot(adx_ma, color = color.white, style = plot.style_circles)
+
+// ========================================================================== //

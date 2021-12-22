@@ -1,0 +1,68 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+indicator("INDICATOR: Breakout Bollinger Band & Keltner Channel (林19)", shorttitle = "I BBKC (林19)", overlay = false)
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR INPUT /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Input: indicator type value =================================================
+band_type   = input.session('BB%B', "Band Type", options = ['BBKC', 'BB%B', 'KC%K'])
+
+src = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close)
+band_period = input.int(200, "Band Value")
+band_mult   = input.float(1.0, "Band Mult")
+
+smooth      = input.bool(false, "Use smooth band?")
+band_smooth = input.int(9, "Smooth Value")
+
+upper_break = input.float(1.0, "Bullish Breakout")
+lower_break = input.float(0.0, "Bearish Breakout")
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR CALCULATION & ALGORITHM ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Algo: set the bollinger band & keltner channel ==============================
+[bb_mid, bb_upper, bb_lower] = ta.bb(src, band_period, band_mult)
+[kc_mid, kc_upper, kc_lower] = ta.kc(src, band_period, band_mult)
+// ========================================================================== //
+
+// Calc: bb & kc calculation ===================================================
+bbpb = smooth ? ta.ema((src - bb_lower) / (bb_upper - bb_lower), band_smooth) : 
+         (src - bb_lower) / (bb_upper - bb_lower)
+         
+kcpk = smooth ? ta.ema((src - kc_lower) / (kc_upper - kc_lower), band_smooth) : 
+         (src - kc_lower) / (kc_upper - kc_lower)
+         
+bbkc = smooth ? ta.ema((src - math.avg(bb_lower, kc_lower)) / (math.avg(bb_upper, kc_upper) - math.avg(bb_lower, kc_lower)), band_smooth) : 
+         (src - math.avg(bb_lower, kc_lower)) / (math.avg(bb_upper, kc_upper) - math.avg(bb_lower, kc_lower))
+         
+band =  band_type == 'BBKC' ? bbkc : 
+             band_type == 'BB%B' ? bbpb :
+                 kcpk
+// ========================================================================== //
+
+// Algo: set color for inticator ===============================================
+band_color  = band > upper_break ? color.lime : band < lower_break ? color.red : color.white
+long        = ta.crossover(band, 0) ? color.lime : ta.crossover(band, 1) ? color.green : na
+short       = ta.crossunder(band, 1) ? color.red : ta.crossunder(band, 0) ? color.maroon : na
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// PLOT INDICATOR //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Plot: indicator and breakout line ===========================================
+hline(upper_break, color = color.lime, linestyle = hline.style_solid, title = "Upper Breakout")
+hline(lower_break, color = color.red, linestyle = hline.style_solid, title = "Lower Breakout")
+
+hline(0.5, title = "Mid Breakout")
+
+plot(band, color = band_color, linewidth = 2, title = "Band")
+plot(1, color = long, style = plot.style_columns)
+plot(1, color = short, style = plot.style_columns)
+// ========================================================================== //

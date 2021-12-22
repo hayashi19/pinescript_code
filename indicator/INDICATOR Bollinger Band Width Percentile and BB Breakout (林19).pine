@@ -1,0 +1,96 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+// |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
+// Credit to The_Caretaker
+// Message from The_Caretaker
+// "Much respect to John A Bollinger the creator of Bollinger Bands® and Bollinger Band Width indicators.
+// Feel free to reuse or develop this script further, please drop me a note below if you find it useful."
+
+// I just modify the bbw to more simple in code and add a bb%b to check the breakout.
+// |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
+
+//@version=5
+indicator('INDICATOR: Bollinger Band Width Percentile and BB Breakout (林19)', 'BBWP And BB%B Breakout (林19)', format = format.percent, max_bars_back = 1000)
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR INPUT /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Input: bbw input value ======================================================
+
+bbw             = input.bool    (true, "BBW ==================================")
+bbpb            = input.bool    (true, "BB%B =================================")
+
+i_priceSrc      = input.source  ( close, 'Price Source')
+i_basisType     = input.string  ( 'SMA', 'Basis Type', options = ['SMA', 'EMA', 'VWMA'])
+i_bbwpLen       = input.int     ( 13, 'Length')
+i_bbwpLkbk      = input.int     ( 252, 'Lookback')
+
+i_ma1On         = input.bool    ( true, '', inline = '1')
+i_ma1Type       = input.string  ( 'SMA', 'MA 1 Type', options = ['SMA', 'EMA', 'VWMA'], inline = '1')
+i_c_ma1         = input.color   ( #FFFFFF, '', inline = '1')
+i_ma1Len        = input.int     ( 5, 'Length')
+
+i_upperLevel    = input.int     ( 98, 'Extreme High')
+i_lowerLevel    = input.int     ( 2, 'Extreme Low')
+
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR CALCULATION & ALGORITHM ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Calc: create the bbw calculation function ===================================
+
+f_maType ( _price, _len) =>
+     ta.vwma ( _price, _len )
+
+f_bbwp ( _price, _bbwLen, _bbwpLen) =>
+    float _basis = f_maType ( _price, _bbwLen)
+    float _dev = ta.stdev ( _price, _bbwLen )
+    _bbw = ( _basis + _dev - ( _basis - _dev )) / _basis
+    _bbwSum = 0.0
+    _len = bar_index < _bbwpLen ? bar_index : _bbwpLen
+    for _i = 1 to _len by 1
+        _bbwSum += ( _bbw[_i] > _bbw ? 0 : 1 )
+        _bbwSum
+    _return = bar_index >= _bbwLen ? ( _bbwSum / _len) * 100 : na
+    _return
+    
+// ========================================================================== //
+
+// Algo: set the bbw value =====================================================
+bbwp        = f_bbwp ( i_priceSrc, i_bbwpLen, i_bbwpLkbk)
+bbwpMA1     = i_ma1On ? f_maType ( bbwp, i_ma1Len) : na
+hiAlrtBar   = bbwp >= i_upperLevel ? bbwp : na
+loAlrtBar   = bbwp <= i_lowerLevel ? bbwp : na
+// ========================================================================== //
+
+// Algo: set the bb%b value ====================================================
+[mid, upper, lower] = ta.bb(i_priceSrc, i_bbwpLkbk, 1)
+bbr     = (i_priceSrc - lower)/(upper - lower) * 100
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// PLOT INDICATOR //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Plot: indicator bbw =========================================================
+
+p_scaleHi   = hline ( 100,  'Scale High', #ff0000, hline.style_solid )
+p_midLine   = hline ( 50,   'Mid-Line', color.silver, hline.style_dashed )
+p_scaleLo   = hline ( 0,    'Scale Low', #0000ff, hline.style_solid )
+
+p_bbwp      = plot ( bbw ? bbwp : na,      'BBWP',         color = color.from_gradient(bbwp, 15, 85, color.blue, color.red), style = plot.style_line, linewidth = 2, editable = false)
+p_hiAlrt    = plot ( hiAlrtBar, 'Extreme Hi',   color = color.red, style = plot.style_columns, histbase = 0, editable = false )
+p_loAlrt    = plot ( loAlrtBar, 'Extreme Lo',   color = color.blue, style = plot.style_columns, histbase = 100, editable = false )
+p_ma1       = plot ( bbw ? bbwpMA1 : na,   'MA 1',         color = color.silver, style = plot.style_circles)
+
+// ========================================================================== //
+
+// Plot: indicator BB%B ========================================================
+
+plot(bbpb ? bbr : na, "Bollinger Bands %B", color = bbr >= 0 and bbr <= 100 ? bbr < 50 ? color.fuchsia : color.aqua : color.yellow) 
+
+// ========================================================================== //

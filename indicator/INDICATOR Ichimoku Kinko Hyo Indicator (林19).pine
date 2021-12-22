@@ -1,0 +1,114 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+indicator('INDICATOR: Ichimoku Kinko Hyo Indicator (林19)', shorttitle = 'Ichimoku Kumo (林19)', overlay = true)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR INPUT =============================================================
+table_view      = input.bool(false, 'Show info table ?')
+
+con_per         = input.int(9, 'Conversion Line Length')
+base_per        = input.int(26, 'Base Line Length')
+lagspan_per     = input.int(52, 'Leading Span Length')
+
+kumo_displace   = input.bool(false, 'Displace the kumo ?')
+displacement    = input.int(26, 'Displacement')
+
+simple_view     = input.bool(false, 'Simple view ?')
+signal_view     = input.bool(false, 'Show signal ?')
+signal_type     = input.session("Simple", "Signal Type", options = ["Traditional", "Simple", "Kumo Cross"])
+// ========================================================================== //
+
+// INDICATOR CALCULATION =======================================================
+// ichimoku
+donchian(len) => math.avg(ta.lowest(len), ta.highest(len))
+
+con_line        = donchian(con_per)
+base_line       = donchian(base_per)
+
+lead_line_1     = math.avg(con_line, base_line)
+lead_line_2     = donchian(lagspan_per)
+lead_1_displace = kumo_displace ? lead_line_1[displacement - 1] : lead_line_1
+lead_2_displace = kumo_displace ? lead_line_2[displacement - 1] : lead_line_2
+
+lag_span        = ta.sma(close, 14)
+// ========================================================================== //
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR COLOR =============================================================
+kumo_color      = lead_line_1 >= lead_line_2 ? color.lime : color.red
+// ========================================================================== //
+
+// PLOT INDICATOR ==============================================================
+// ichimoku
+plot(simple_view ? na : con_line, color = color.new(color.aqua, 0), title = 'Conversion Line')
+plot(simple_view ? na : base_line, color = color.new(color.fuchsia, 0), title = 'Base Line')
+
+plot(simple_view ? na : lag_span, color = color.new(color.white, 0), title = 'Lagging Span', offset = -displacement + 1)
+
+p1 = plot(lead_line_1, color = color.new(color.lime, 0), title = 'Leading Span A', offset = kumo_displace ? displacement - 1 : 0)
+p2 = plot(lead_line_2, color = color.new(color.red, 0), title = 'Leading Span B', offset = kumo_displace ? displacement - 1 : 0)
+
+fill(p1, p2, color = color.new(kumo_color, 80))
+// ========================================================================== //
+
+// PLOT CANDLE =================================================================
+// Color condition
+candle_dolor = close >= lead_1_displace and close >= lead_2_displace ? color.green : close <= lead_1_displace and close <= lead_2_displace ? color.red : color.white
+
+// Plot
+plotcandle(open, high, low, close, color = candle_dolor, wickcolor = candle_dolor, bordercolor = candle_dolor)
+// ========================================================================== //
+
+// PLOT SIGNAL =================================================================
+long_simp   = (ta.crossover(lead_1_displace, lead_2_displace) and close >= lead_1_displace and close >= lead_2_displace) or
+                 (ta.crossover(close, lead_1_displace) and lead_1_displace >= lead_2_displace) or 
+                     (ta.crossover(close, lead_2_displace) and lead_1_displace <= lead_2_displace) 
+
+short_simp  = (ta.crossunder(lead_1_displace, lead_2_displace) and close <= lead_1_displace and close <= lead_2_displace) or
+                 (ta.crossunder(close, lead_1_displace) and lead_1_displace <= lead_2_displace) or
+                     (ta.crossover(close, lead_1_displace) and lead_1_displace >= lead_2_displace)
+                 
+long_trad   = ((close >= lead_1_displace and close >= lead_2_displace) and ta.crossover(con_line, base_line)) or
+                 (ta.crossover(lead_1_displace, lead_2_displace) and con_line >= base_line and close >= lead_1_displace)
+
+short_trad  = ((close <= lead_1_displace and close <= lead_2_displace) and ta.crossunder(con_line, base_line)) or
+                 (ta.crossunder(lead_1_displace, lead_2_displace) and con_line <= base_line and close <= lead_1_displace)
+                 
+long_kumo   = ta.crossover(lead_1_displace, lead_2_displace)
+
+short_kumo  = ta.crossunder(lead_1_displace, lead_2_displace)
+
+long        = signal_type == 'Simple' ? long_simp : 
+                 signal_type == 'Traditional' ? long_trad : long_kumo
+
+short       = signal_type == 'Simple' ? short_simp : 
+                 signal_type == 'Traditional' ? short_trad : short_kumo
+
+plotshape(signal_view ? long : na, style = shape.labelup, location = location.belowbar, color = color.new(color.green, 0), text = 'Long', textcolor = color.new(color.white, 0))
+plotshape(signal_view ? short : na, style = shape.labeldown, location = location.abovebar, color = color.new(color.red, 0), text = 'Short', textcolor = color.new(color.white, 0))
+// ========================================================================== //
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// TABLE =======================================================================
+// table condition
+kumo_cond       = lead_line_1 >= lead_line_2 ? 'Bullish' : 'Bearish'
+short_momentum  = close >= con_line ? 'Bullish' : 'Bearish'
+mid_momentum    = close >= base_line ? 'Bullish' : 'Bearish'
+line_cond       = con_line >= base_line ? 'Bullish' : 'Bearish'
+price_act       = close >= lead_1_displace and close >= lead_2_displace ? 'Bullish' : close <= lead_1_displace and close <= lead_2_displace ? 'Bearish' : 'Range'
+
+// table
+info_table      = table.new(position = position.middle_right, columns = 1, rows = 5, bgcolor = color.new(color.black, 60), border_width = 1)
+
+if table_view
+    table.cell(table_id = info_table, column = 0, row = 0, text = 'Long term ' + kumo_cond, text_color = color.white, text_halign = text.align_left)
+    table.cell(table_id = info_table, column = 0, row = 1, text = 'Mid momentum ' + short_momentum, text_color = color.white, text_halign = text.align_left)
+    table.cell(table_id = info_table, column = 0, row = 2, text = 'Short momentum ' + mid_momentum, text_color = color.white, text_halign = text.align_left)
+    table.cell(table_id = info_table, column = 0, row = 3, text = 'Momentum ' + line_cond, text_color = color.white, text_halign = text.align_left)
+    table.cell(table_id = info_table, column = 0, row = 4, text = 'Price trend ' + price_act, text_color = color.white, text_halign = text.align_left)
+// ========================================================================== //

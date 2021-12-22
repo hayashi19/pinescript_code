@@ -1,0 +1,116 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+// |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
+// This chopzone indicator is using the original calculation from the chopzone indicator, that can be found in tradingview indicator list.
+// This indicator is just a modification from the original chopzone indicator,
+// rather than just plot the indicator color, this new chopzone indicator plot the color at the candle stick and also show the moving average.
+// Rather than just use one moving average type (just EMA), this new chopzone indicator have a varient type of moving average.
+// |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
+
+//@version=5
+indicator("INDICATOR: Moving Average Chopzone Color (林19)", shorttitle = "I MA-CZ (林19)", overlay = true)
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR INPUT /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Input: for source of the indicator ==========================================
+src = input(close, title = "Source")                                            
+// ========================================================================== //
+
+// Input: for chopzone calculation value =======================================
+CHOPZONE    = input.bool(true, "=== CHOPZONE =================================")
+
+avg         = input.source(ohlc4, "Indicator Average Source")
+pi          = math.atan(input.int(1, "Arctan")) * input.int(4, "Arctan Mult")
+periods     = input.int(30, "High Low Period")
+highestHigh = ta.highest(periods)
+lowestLow   = ta.lowest(periods)
+span        = input.int(25, "Span") / (highestHigh - lowestLow) * lowestLow
+
+candle_color= input.bool(false, "Use regural candle color?")
+// ========================================================================== //
+
+// Input: for moving average type and lenght value =============================
+MA          = input.bool(true, "=== MA =======================================")
+
+ma_1_type   = input.session('SMA', "MA Type", 
+                 options = ['SMA','EMA','ALMA','HMA','RMA','SWMA','VWMA','WMA', "LSMA", "TEMA", "DEMA"])
+ma_1_lenght = input.int(34, "MA")
+ma_1_offset = input.int(0, "MA Offset")
+ma_1_sigma  = input.float(0.85, "MA Sigma")
+ma_1_floor  = input.int(6, "MA Floor")
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR CALCULATION & ALGORITHM ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Algo: Selecting the moving average type =====================================
+// TEMA DEMA
+tema11      = ta.ema(src, ma_1_lenght)
+tema12      = ta.ema(tema11, ma_1_lenght)
+tema13      = ta.ema(tema12, ma_1_lenght)
+tema_1      = 3 * (tema11 - tema12) + tema13
+
+dema11      = ta.ema(src, ma_1_lenght)
+dema12      = ta.ema(dema11, ma_1_lenght)
+dema_1      = 2 * dema11 - dema12
+
+// MA TYPE
+ma          = ma_1_type == 'SMA' ? ta.sma(src, ma_1_lenght) :
+                 ma_1_type == 'EMA' ? ta.ema(src, ma_1_lenght) :
+                     ma_1_type == 'ALMA' ? ta.alma(src, ma_1_lenght, ma_1_sigma, ma_1_floor) :
+                         ma_1_type == 'HMA' ? ta.hma(src, ma_1_lenght) :
+                             ma_1_type == 'RMA' ? ta.rma(src, ma_1_lenght) :
+                                 ma_1_type == 'SWMA' ? ta.swma(src) :
+                                     ma_1_type == 'VWMA' ? ta.vwma(src, ma_1_lenght) :
+                                         ma_1_type == 'WMA' ? ta.wma(src, ma_1_lenght) :
+                                             ma_1_type == 'LSMA' ? ta.linreg(src, ma_1_lenght, ma_1_offset) :
+                                                 ma_1_type == 'TEMA' ? tema_1 :
+                                                     ma_1_type == 'DEMA' ? dema_1 : na
+// ========================================================================== //
+
+// Algo: chopzone calculaion ===================================================
+// Chopzone input value calculation
+x1_ma       = 0
+x2_ma       = 1
+y1_ma       = 0
+y2_ma       = (ma[1] - ma) / avg * span
+
+c_ma        = math.sqrt((x2_ma - x1_ma) * (x2_ma - x1_ma) + (y2_ma - y1_ma)*(y2_ma - y1_ma))
+ma_angle_1  = math.round(180 * math.acos((x2_ma - x1_ma)/c_ma) / pi)
+ma_angle    = y2_ma > 0 ? - ma_angle_1 : ma_angle_1
+
+// Chopzone color
+chop_zone_color = ma_angle >= 5 ? #00FF00 :
+                     ma_angle < 5 and ma_angle >= 3.57 ? #00FFFF :
+                         ma_angle < 3.57 and ma_angle >= 2.14 ? #005EFF :
+                             ma_angle < 2.14 and ma_angle >= .71 ? #A4E600 :
+                                 ma_angle <= -1 * 5 ? #FF0000 :
+                                     ma_angle > -1 * 5 and ma_angle <= -1 * 3.57 ? #FF17FF :
+                                         ma_angle > -1 * 3.57 and ma_angle <= -1 * 2.14 ? #BE0AFF :
+                                             ma_angle > -1 * 2.14 and ma_angle <= -1 * .71 ? #FF5500 :
+                                                 color.yellow
+// ========================================================================== //
+
+// Algo: use the regural candlestick color =====================================
+r_candle_color  = close > open ? color.lime : color.red
+p_candle_color  = candle_color ? r_candle_color : chop_zone_color
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////
+// PLOT INDICATOR //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Plot: candle with the color from chopzone color =============================
+plotcandle(CHOPZONE ? open : na, high, low, close, 
+             color = p_candle_color, 
+                 wickcolor = p_candle_color, 
+                     bordercolor = p_candle_color)
+// ========================================================================== //
+
+// Plot: the moving average indicator ==========================================
+plot(MA ? ma : na, color = color.white)
+// ========================================================================== //

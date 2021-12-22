@@ -1,0 +1,40 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+indicator("INDICATOR: High Low MA Band Indicator (林19)", shorttitle = "HL MA (林19)", overlay = true)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SET INDICATOR INPUT =========================================================
+// MA
+ma_type     = input.session("EMA", "MA Type", options = ["EMA", "WMA", "VWMA", "HMA"])
+ma_length   = input.int(50, "MA Value")
+// ========================================================================== //
+
+// INDICATOR CALCULATION =======================================================
+// MA
+ma_high     = ma_type == "EMA" ? ta.ema(high, ma_length) :
+                 ma_type == "WMA" ? ta.wma(high, ma_length) :
+                     ma_type == "VWMA" ? ta.vwma(high, ma_length) :
+                         ta.hma(high, ma_length)
+ma_low      = ma_type == "EMA" ? ta.ema(low, ma_length) :
+                 ma_type == "WMA" ? ta.wma(low, ma_length) :
+                     ma_type == "VWMA" ? ta.vwma(low, ma_length) :
+                         ta.hma(low, ma_length)
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// PLOt COLOR ==================================================================
+color_ma    = close > ma_high ? color.aqua : close < ma_low ? color.fuchsia : color.white
+// ========================================================================== //
+
+// PLOT ========================================================================
+p_ma_high  = plot(ma_high, color = color_ma)
+p_ma_low   = plot(ma_low,  color = color_ma)
+
+fill(p_ma_high, p_ma_low, color = color.new(color_ma, 80))
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
