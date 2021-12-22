@@ -1,0 +1,120 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+strategy(title = "STARTEGY: All Moving Average (林19)", shorttitle = "All MA (林19)", overlay = true, format = format.price, pyramiding = 0, default_qty_type = strategy.cash, default_qty_value = 100, currency = currency.USD, slippage = 1, process_orders_on_close = true, initial_capital = 100)
+
+// MA 1 INPUT
+a = input(false, "MA 1 =======================================================")
+ma_1_type   = input.session('SMA', "MA 1 Type", options = ['SMA','EMA','ALMA','HMA','RMA','SWMA','VWMA','WMA', "LSMA", "TEMA", "DEMA"], inline = "MA 1")
+ma_1_src    = input.source(close, "MA 1 Source", inline = "MA 1")
+
+ma_1_lenght = input.int(9, "MA 1 Lenght", inline = "Extra MA 1")
+ma_1_offset = input.int(0, "MA 1 Offset", inline = "Extra MA 1")
+ma_1_sigma  = input.float(0.85, "MA 1 Sigma", inline = "Extra MA 1")
+ma_1_floor  = input.int(6, "MA 1 Floor", inline = "Extra MA 1")
+
+// MA 1 CALCULATION
+tema11      = ta.ema(ma_1_src, ma_1_lenght)
+tema12      = ta.ema(tema11, ma_1_lenght)
+tema13      = ta.ema(tema12, ma_1_lenght)
+tema_1      = 3 * (tema11 - tema12) + tema13
+
+dema11      = ta.ema(ma_1_src, ma_1_lenght)
+dema12      = ta.ema(dema11, ma_1_lenght)
+dema_1      = 2 * dema11 - dema12
+
+ma_1        = ma_1_type == 'SMA' ? ta.sma(ma_1_src, ma_1_lenght) :
+                 ma_1_type == 'EMA' ? ta.ema(ma_1_src, ma_1_lenght) :
+                     ma_1_type == 'ALMA' ? ta.alma(ma_1_src, ma_1_lenght, ma_1_offset, ma_1_floor) :
+                         ma_1_type == 'HMA' ? ta.hma(ma_1_src, ma_1_lenght) :
+                             ma_1_type == 'RMA' ? ta.rma(ma_1_src, ma_1_lenght) :
+                                 ma_1_type == 'SWMA' ? ta.swma(ma_1_src) :
+                                     ma_1_type == 'VWMA' ? ta.vwma(ma_1_src, ma_1_lenght) :
+                                         ma_1_type == 'WMA' ? ta.wma(ma_1_src, ma_1_lenght) :
+                                             ma_1_type == 'LSMA' ? ta.vwma(ma_1_src, ma_1_lenght) :
+                                                 ma_1_type == 'TEMA' ? tema_1 :
+                                                     ma_1_type == 'DEMA' ? dema_1 : na
+
+// MA 2 INPUT
+b = input(false, "MA 2 =======================================================")
+ma_2_type   = input.session('SMA', "MA 2 Type", options = ['SMA','EMA','ALMA','HMA','RMA','SWMA','VWMA','WMA', "LSMA", "TEMA", "DEMA"], inline = "MA 2")
+ma_2_src    = input.source(close, "MA 2 Source", inline = "MA 2")
+
+ma_2_lenght = input.int(50, "MA 2 Lenght", inline = "Extra MA 2")
+ma_2_offset = input.int(0, "MA 2 Offset", inline = "Extra MA 2")
+ma_2_sigma  = input.float(0.85, "MA 2 Sigma", inline = "Extra MA 2")
+ma_2_floor  = input.int(6, "MA 2 Floor", inline = "Extra MA 2")
+
+// MA 2 CALCULATION
+tema21      = ta.ema(ma_2_src, ma_2_lenght)
+tema22      = ta.ema(tema21, ma_2_lenght)
+tema23      = ta.ema(tema22, ma_2_lenght)
+tema_2      = 3 * (tema21 - tema22) + tema23
+
+dema21      = ta.ema(ma_2_src, ma_2_lenght)
+dema22      = ta.ema(dema21, ma_2_lenght)
+dema_2      = 2 * dema21 - dema22
+
+ma_2        = ma_2_type == 'SMA' ? ta.sma(ma_2_src, ma_2_lenght) :
+                 ma_2_type == 'EMA' ? ta.ema(ma_2_src, ma_2_lenght) :
+                     ma_2_type == 'ALMA' ? ta.alma(ma_2_src, ma_2_lenght, ma_2_offset, ma_2_floor) :
+                         ma_2_type == 'HMA' ? ta.hma(ma_2_src, ma_2_lenght) :
+                             ma_2_type == 'RMA' ? ta.rma(ma_2_src, ma_2_lenght) :
+                                 ma_2_type == 'SWMA' ? ta.swma(ma_2_src) :
+                                     ma_2_type == 'VWMA' ? ta.vwma(ma_2_src, ma_2_lenght) :
+                                         ma_2_type == 'WMA' ? ta.wma(ma_2_src, ma_2_lenght) :
+                                             ma_1_type == 'LSMA' ? ta.vwma(ma_2_src, ma_2_lenght) :
+                                                 ma_1_type == 'TEMA' ? tema_2 :
+                                                     ma_1_type == 'DEMA' ? dema_2 : na
+                                                     
+// RSI
+d = input(false, "RSI ========================================================")
+rsi_src     = input.source(ohlc4, "RSI Source", inline = "RSI")
+rsi_lenght  = input.int(14, "RSI", inline = "RSI")
+
+rsi_tp_long = input.int(70, "RSI TP Long", inline = "RSI TP SL")
+rsi_tp_short = input.int(30, "RSI TP Short", inline = "RSI TP SL")
+rsi_sl_long = input.int(30, "RSI SL Long", inline = "RSI TP SL")
+rsi_sl_short = input.int(70, "RSI SL Short", inline = "RSI TP SL")
+rsi         = ta.rsi(rsi_src, rsi_lenght)
+
+// VOLATILITY
+e = input(false, "Volatility =================================================")
+atr_lenght  = input.int(50, "ATR", inline = "ATR")
+atr_comp    = input.int(11, "ATR Compare", inline = "ATR")
+atr = ta.atr(atr_lenght)
+
+// Show Plot
+c = input(false, "Startegy Extra Setting =====================================")
+plot    = input.bool(true, "Show Indicator")
+buy_sell= input.bool(true, "Show Buy & Sell")
+rsi_stop    = input.bool(true, "Use RSI stoploss takeprofit?")
+atr_comfirm = input.bool(true, "Use ATR comfirmation?")
+
+p1      = plot(plot ? ma_1 : na, color = color.aqua)
+p2      = plot(plot ? ma_2 : na, color = color.fuchsia)
+fill_color = ma_1 > ma_2 ? color.green : color.red
+fill(p1, p2, color = color.new(fill_color, 85))
+
+// Strategy Algo
+long_entry  = ta.crossover(ma_1, ma_2) and (atr_comfirm ? atr[0] > atr[atr_comp] : 0 == 0)
+short_entry = ta.crossunder(ma_1, ma_2) and (atr_comfirm ? atr[0] > atr[atr_comp] : 0 == 0)
+
+long_tp     = ta.crossover(rsi, rsi_tp_long)
+short_tp    = ta.crossunder(rsi, rsi_tp_short)
+
+long_sl     = ta.crossunder(rsi, rsi_sl_long)
+short_sl    = ta.crossover(rsi, rsi_sl_short)
+
+// Strategy Execution
+strategy.entry("enter long", strategy.long, when = long_entry)
+strategy.entry("enter short", strategy.short, when = short_entry)
+
+strategy.close("enter long", when = rsi_stop ? long_tp : na, qty_percent = 100, comment = "take profit slong")
+strategy.close("enter short", when = rsi_stop ? short_tp : na, qty_percent = 100, comment = "take profit short")
+
+strategy.close("enter long", when = rsi_stop ? long_sl : na, qty_percent = 100, comment = "stop loss slong")
+strategy.close("enter short", when = rsi_stop ? short_sl : na, qty_percent = 100, comment = "stop loss short")
+
+bgcolor(buy_sell ? color.new(long_entry ? color.green : short_entry ? color.red : na, 85) : na)

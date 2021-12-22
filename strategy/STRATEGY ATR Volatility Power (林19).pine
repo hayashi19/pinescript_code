@@ -1,0 +1,61 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+strategy("STRATEGY: ATR Volatility Power (林19)", shorttitle = "ATR Volatility Power (林19)", overlay = false, format = format.price, pyramiding = 0, default_qty_type = strategy.cash, default_qty_value = 100, currency = currency.USD, slippage = 1, process_orders_on_close = true, initial_capital = 100)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR INPUT =============================================================
+atr_period  = input.int(14, "ATR Value")
+atr_low     = input.int(200, "ATR Lowest Value")
+atr_smooth  = input.int(9, "ATR Smooth")
+break_per   = input.int(9, "ATR Breakout Value")
+// ========================================================================== //
+
+// INDICATOR CALCULATION =======================================================
+atr         = ta.atr(atr_period)
+atr_lowest  = ta.lowest(atr, atr_low)
+atr         := ta.sma(atr - atr_lowest, atr_smooth)
+
+atr_break   = ta.lowest(atr, break_per)
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// INDICATOR CONDITION & COLOR =================================================
+atr_color   = atr[1] < atr ? color.lime : color.red
+break_color = atr == atr_break ? color.blue : color.white
+// ========================================================================== //
+
+// INDICATOR PLOT ==============================================================
+plot(atr, color = atr_color, style = plot.style_columns)
+plot(atr_break, color = break_color, style = plot.style_circles, linewidth = 2)
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Strategy Algo
+long_entry  = close[1] < close[2] and close[0] > close[1] and atr[0] > atr[1] //and close > ta.ema(close, 200)
+short_entry = close[1] > close[2] and close[0] < close[1] and atr[0] > atr[1] //and close < ta.ema(close, 200)
+
+long_tp     = close[1] > close[2] and close[0] < close[1] and atr[0] > atr[1]
+short_tp    = close[1] < close[2] and close[0] > close[1] and atr[0] > atr[1]
+
+// long_sl     = ta.crossunder(rsi, rsi_sl_long)
+// short_sl    = ta.crossover(rsi, rsi_sl_short)
+
+// Strategy Execution
+strategy.entry("enter long", strategy.long, when = long_entry)
+strategy.entry("enter short", strategy.short, when = short_entry)
+
+// strategy.exit("exit long", "enter long", profit = 50000)
+// strategy.exit("exit short", "enter short", profit = 50000)
+
+strategy.close("enter long", when = long_tp, qty_percent = 100, comment = "take profit slong")
+strategy.close("enter short", when = short_tp, qty_percent = 100, comment = "take profit short")
+
+// strategy.close("enter long", when = rsi_stop ? long_sl : na, qty_percent = 100, comment = "stop loss slong")
+// strategy.close("enter short", when = rsi_stop ? short_sl : na, qty_percent = 100, comment = "stop loss short")
+
+// bgcolor(buy_sell ? color.new(long_entry ? color.green : short_entry ? color.red : na, 85) : na)
