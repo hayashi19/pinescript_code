@@ -1,0 +1,107 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HayashiHitsuji
+
+//@version=5
+strategy(title = "STARTEGY: TEST (林19)", shorttitle = "TEST (林19)", overlay = true, commission_type = strategy.commission.percent, commission_value = 0.1, format = format.price, pyramiding = 0, default_qty_type = strategy.cash, default_qty_value = 100, currency = currency.USD, slippage = 1, process_orders_on_close = true, initial_capital = 100)
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR INPUT /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Input: trading date range ===================================================
+
+startDate   = input.time(timestamp("1 Jan 2021 00:00:00 GMT+7"), "Start Date", group = "Trading Date Range")
+endDate     = input.time(timestamp("30 Dec 2021 00:00:00 GMT+7"), "End Date", group = "Trading Date Range")
+
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR CALCULATION & ALGORITHM ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Algo: set the date range for trading ========================================
+
+inDateRange = (time >= startDate) and (time < endDate)
+
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// STRATEGY ALGORITHM //////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Algo: set the long entry ====================================================
+
+// when to entry
+LONG_EN_1 = ta.barssince() <= 1 ? true : false
+
+LONG_EN = LONG_EN_1 and strategy.opentrades == 0 and inDateRange
+
+// the entry value
+float LONG_EN_PRC = na
+LONG_EN_PRC := LONG_EN ? .... : LONG_EN_PRC[1] 
+
+// ========================================================================== //
+
+// Algo: set the long stop loss ================================================
+
+float LONG_SL = na
+LONG_SL := LONG_EN ? .... : LONG_SL[1]
+
+// ========================================================================== //
+
+// Algo: set the long take profit ==============================================
+
+// calc the different of the price and the stop loss
+diffTp = math.abs(close - ....)
+
+// set the take profit value
+float LONG_TP = na
+LONG_TP := LONG_EN ? .... : LONG_TP[1]
+
+// ========================================================================== //
+
+// Algo: set the value for ploting the take profit & stoploss ==================
+
+longPlotSL = strategy.opentrades > 0 and strategy.position_size > 0 ? LONG_SL : na
+longPlotEN = strategy.opentrades > 0 and strategy.position_size > 0 ? LONG_EN_PRC : na
+longPlotTP = strategy.opentrades > 0 and strategy.position_size > 0 ? LONG_TP : na
+
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// STRATEGY EXECUTION //////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Execution: set open trade for long condition ================================
+
+if (LONG_EN)
+    strategy.entry('long', strategy.long)
+    strategy.exit('exit', 'long', stop = LONG_SL, limit = LONG_TP)
+    
+// ========================================================================== //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// INDICATOR PLOT //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Plot: show the take profit and stop loss line ===============================
+
+p1 = plot(longPlotSL, title = 'LONG STOP LOSS', style = plot.style_linebr, color = color.red)
+p2 = plot(longPlotEN, title = 'LONG ENTRY', style = plot.style_linebr, color = color.white)
+p3 = plot(longPlotTP, title = 'LONG TAKE PROFIT', style = plot.style_linebr, color = color.green)
+
+// Fill color
+fill(p1, p2, color = color.new(color.red, 90))
+fill(p2, p3, color = color.new(color.green, 90))
+
+// ========================================================================== // 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
