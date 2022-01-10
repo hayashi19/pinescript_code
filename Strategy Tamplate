@@ -60,7 +60,7 @@ diffTp = math.abs(close - ....)
 
 // set the take profit value
 float LONG_TP = na
-LONG_TP := LONG_EN ? .... : LONG_TP[1]
+LONG_TP := LONG_EN ? close + (.... * diffTp) : LONG_TP[1]
 
 // ========================================================================== //
 
